@@ -1,0 +1,102 @@
+openapi: 3.0.1
+info:
+  title: Service Management API
+  description: API for managing services that can be activated or deactivated for customers.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+    description: Production server
+paths:
+  /service:
+    get:
+      summary: Retrieve all services
+      description: Fetch a list of all available services. This includes both active and inactive services.
+      responses:
+        '200':
+          description: A list of all services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: The unique identifier for the service.
+                    name:
+                      type: string
+                      description: The name of the service.
+                    status:
+                      type: string
+                      description: The status of the service (active or inactive).
+  /service/active:
+    get:
+      summary: Retrieve active services
+      description: Fetch a list of services that are currently active.
+      responses:
+        '200':
+          description: A list of active services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: The unique identifier for the active service.
+                    name:
+                      type: string
+                      description: The name of the active service.
+  /service/activate:
+    post:
+      summary: Activate a service
+      description: Activate a specific service for a customer. The request body must include the service ID to be activated.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                service_id:
+                  type: string
+                  description: The unique identifier of the service to activate.
+      responses:
+        '200':
+          description: Service activated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Confirmation message.
+  /service/deactivate:
+    delete:
+      summary: Deactivate a service
+      description: Deactivate a specific service for a customer. The request body must include the service ID to be deactivated.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                service_id:
+                  type: string
+                  description: The unique identifier of the service to deactivate.
+      responses:
+        '200':
+          description: Service deactivated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Confirmation message.
