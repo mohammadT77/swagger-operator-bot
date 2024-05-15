@@ -25,7 +25,7 @@ chatbot = SwaggerChatbot(swagger, llm=model)
 while True:
     user_input = input(">>> ")
     try:
-        print("---", chatbot.invoke(user_input).content)
+        print("---", chatbot.invoke(user_input))
     except Exception as e:
         print(e)
 

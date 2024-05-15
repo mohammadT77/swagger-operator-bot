@@ -50,9 +50,9 @@ class SwaggerChatbot:
         # Step 2: Parse the LLM response to determine the action
         try:
             action, params, conf = self.parse_response(response.content)
-        except ValueError:
+        except ValueError as e:
             # self._history.append(response.content)
-            return response
+            return e.args[0]
 
         # Step 3: Map the action to the corresponding Swagger endpoint
         # endpoint, method = self.map_action_to_endpoint(action)
@@ -61,26 +61,13 @@ class SwaggerChatbot:
         # Step 4: Perform the action using the appropriate HTTP method
         result = self.perform_action(endpoint, method, params)
 
-        result_prompt = """
-        The client has asked this:
-        {messages}
-        
-        Then you have done the following action for the client:
-        {action}
-
-        and the result is:
-        {result}
-
-        Now, take a look at the result and explain it to them. Also ask them if they want other things to do.
-        """
-        result_prompt_template = PromptTemplate(template=result_prompt, input_variables=["messages", "action", "result"])
-        prompt = result_prompt_template.format(
-            action=json.dumps(get_all_actions(self.swagger)[action]), 
-            result=json.dumps({"text":result.text,"status_code:":result.status_code}),
-            messages=messages)
+        prompt = self.create_prompt(messages, {
+            "action":json.dumps(get_all_actions(self.swagger)[action]), 
+            "result":json.dumps({"text":result.text,"status_code:":result.status_code}),
+        })
 
         try:
-            return self.llm.invoke(prompt)
+            return self.llm.invoke(prompt).content
         except KeyboardInterrupt:
             exit(0)
         except Exception as e:
@@ -88,7 +75,7 @@ class SwaggerChatbot:
             raise e
         
 
-    def create_prompt(self, messages: str) -> str:
+    def create_prompt(self, messages: str, result=None) -> str:
         # Create a prompt that includes the Swagger specification to ask the LLM for the action to perform
         swagger_tools = json.dumps(get_all_actions(self.swagger))
 
@@ -97,7 +84,7 @@ class SwaggerChatbot:
         confidence_threshold = 0.8 * 100
 
         template = """
-        You are a chatbot interfacing with the following Swagger API specification:
+        You are our company chatbot interfacing with the following Swagger API specification:
         {swagger_tools}
 
         Here is the conversation history:
@@ -105,11 +92,31 @@ class SwaggerChatbot:
 
         User Input: {messages}
 
-        Based on the above, determine the action to perform and the necessary parameters.
-        Respond with the action, parameters, and confidence in JSON format. If confidence is less than {confidence_threshold} percent, ask for more clarifications.
         """
-        prompt_template = PromptTemplate(template=template, input_variables=["messages", "swagger_tools", "confidence_threshold", "history_messages"])
-        prompt = prompt_template.format(messages=messages, swagger_tools=swagger_tools, confidence_threshold=confidence_threshold, history_messages=history_messages)
+        if result is None:
+            template += """
+            Based on the above, determine the action to perform and the necessary parameters.
+            Respond with the action, parameters, and confidence in JSON format. If confidence is less than {confidence_threshold} percent, ask for more clarifications.
+            """
+            prompt_template = PromptTemplate(template=template, input_variables=["messages", "swagger_tools", "confidence_threshold", "history_messages"])
+            prompt = prompt_template.format(messages=messages, swagger_tools=swagger_tools, confidence_threshold=confidence_threshold, history_messages=history_messages)
+        else:
+            template += """
+            The action taken:
+            {action}
+
+            And the result is:
+            {result}
+
+            Now, take a look at the result and explain it to them. Also ask them if they want other things to do.
+            """
+            prompt_template = PromptTemplate(template=template, input_variables=["messages", "swagger_tools", "history_messages", "action", "result"])
+            prompt = prompt_template.format(messages=messages,
+                                            swagger_tools=swagger_tools,
+                                            history_messages=history_messages, 
+                                            action=json.dumps(result["action"]),
+                                            result=json.dumps(result["result"]))
+
         return prompt
     
     def parse_response(self, response: str) -> (str, Dict[str, Any]):
@@ -120,7 +127,8 @@ class SwaggerChatbot:
             params = response_json.get("parameters", {})
             conf = response_json.get("confidence", {})
         except Exception as e:
-            raise ValueError(f"Failed to parse response: {response}, error: {e}")
+            msg = response.replace(r'\{(\s|\r|\n)*"action"(.|\s|\r|\n)*\}', "")
+            raise ValueError(msg)
 
         return action, params, conf
     
