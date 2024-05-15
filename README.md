@@ -12,6 +12,18 @@ This project implements an LLM Operator Chatbot using LangChain. The chatbot int
 - dotenv
 
 ## Setup
+- Install dependencies
+```sh
+pip install -r requirements.txt
+```
+- Run the example server in a terminal
+```sh
+python example_server/app.py
+```
+- Run chatbot CLI in another terminal
+```sh
+python main.py
+```
 
 
 ## Usage
