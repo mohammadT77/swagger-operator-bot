@@ -1,3 +1,4 @@
+from .parse_swagger import get_all_actions
 import json
 from typing import Dict, Any
 from langchain.schema.messages import HumanMessage, SystemMessage
@@ -7,7 +8,7 @@ from langchain.prompts import (
 from langchain_core.output_parsers import StrOutputParser
 from langchain.chat_models.base import BaseChatModel
 import requests
-from .parse_swagger import get_all_actions
+
 
 
 
@@ -126,7 +127,7 @@ class SwaggerChatbot:
             action = response_json.get("action")
             params = response_json.get("parameters", {})
             conf = response_json.get("confidence", {})
-        except Exception as e:
+        except Exception:
             msg = response.replace(r'\{(\s|\r|\n)*"action"(.|\s|\r|\n)*\}', "")
             raise ValueError(msg)
 
